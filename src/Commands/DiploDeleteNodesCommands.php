@@ -4,15 +4,13 @@ namespace Drupal\diplo_delete_nodes\Commands;
 
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drush\Commands\DrushCommands;
-
 use Drupal\Core\Config\ConfigFactoryInterface;
-
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-
 use Drupal\node\Entity\Node;
-
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+
 
 
 /**
@@ -51,6 +49,13 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   private $entityTypeManager;
+  
+  /**
+   * Entity type service.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  private $entityFieldManager;
 
   /**
    * Logger service.
@@ -65,14 +70,18 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   Entity type service.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entityFieldManager
+   *   Entity type service.  
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerChannelFactory
    *   Logger service.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, LoggerChannelFactoryInterface $loggerChannelFactory) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, EntityFieldManagerInterface $entityFieldManager, LoggerChannelFactoryInterface $loggerChannelFactory) {
     parent::__construct();
     $this->entityTypeManager = $entityTypeManager;
     $this->loggerChannelFactory = $loggerChannelFactory;
+    $this->entityFieldManager = $entityFieldManager;
   }
+  
   
   /**
    * Batch process callback.
@@ -87,6 +96,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
    */
   public function processNode($id, $operation_details, &$context) {
     
+    // Delete node.
     $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
     if ($node) {
       $node->delete();
@@ -134,7 +144,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
       '@details' => $operation_details,
     ]);
   }  
-  
   
   
   /**
@@ -208,7 +217,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $batchId = 1;
     
     if (!empty($nids)) {
-    
+      
+      // add node deletion to batch
       foreach ($nids as $nid) {
 
         $this->output()->writeln($this->t('Preparing batch: ') . $batchId);
@@ -222,6 +232,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
         $numOperations++;
       }
       
+      // add content type deletion to end of the batch
       $this->output()->writeln($this->t('Deleting content type: ') . $type);
       $operations[] = [
           __CLASS__ . '::processContentType', [
@@ -267,10 +278,11 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
    */
   public function fields($options = ['format' => 'table']) {
-    \Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
-    $this->logger()->success(dt('Achievement unlocked.'));
+    //\Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
+    //$this->logger()->success(dt('Achievement unlocked.'));
     
-    $all = \Drupal::entityManager()->getFieldMap();
+    $all = $this->entityFieldManager->getFieldMap();
+    
     foreach ($all['node'] as $field => $field_conf) {
       foreach ($field_conf['bundles'] as $key => $content_type) {
         $rows[] = [
@@ -283,4 +295,3 @@ class DiploDeleteNodesCommands extends DrushCommands {
     
     return new RowsOfFields($rows);
   }
-}
