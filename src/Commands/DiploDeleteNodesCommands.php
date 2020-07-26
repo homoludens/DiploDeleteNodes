@@ -18,6 +18,119 @@ use Drush\Commands\DrushCommands;
  */
 class DiploDeleteNodesCommands extends DrushCommands {
 
+  use StringTranslationTrait;
+
+  /**
+   * @var array
+   */
+  protected $batch;
+
+  public $diplo_config;
+
+   /**
+   * The configuration object factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The alias type manager.
+   *
+   * @var \Drupal\pathauto\AliasTypeManager
+   */
+  protected $aliasTypeManager;
+
+  /**
+   * The alias storage helper.
+   *
+   * @var \Drupal\pathauto\AliasStorageHelperInterface
+   */
+  protected $aliasStorageHelper;
+
+  /**
+   * Constructs a new PathautoCommands object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The configuration object factory.
+   * @param \Drupal\pathauto\AliasTypeManager $aliasTypeManager
+   *   The alias type manager.
+   * @param \Drupal\pathauto\AliasStorageHelperInterface $aliasStorageHelper
+   *   The alias storage helper.
+   */
+  public function __construct(ConfigFactoryInterface $configFactory, AliasTypeManager $aliasTypeManager, AliasStorageHelperInterface $aliasStorageHelper) {
+    $this->configFactory = $configFactory;
+    $this->aliasTypeManager = $aliasTypeManager;
+    $this->aliasStorageHelper = $aliasStorageHelper;
+    
+    $this->batch = [
+      'title' => $this->t('Resources upgrade'),
+      'init_message' => $this->t('Starting migration batch operations at Drupal 8 destination'),
+      'error_message' => $this->t('An error occured'),
+      'progress_message' => $this->t('Running migration batch operations at Drupal 8 destination'),
+      'operations' => [],
+      'finished' => [__CLASS__, 'finished'],
+    ];
+  }
+   
+  /**
+   * Adds an operation to the batch.
+   *
+   * @param array $operations
+   * @param class|null $class
+   */
+  public function addOperations(array $operations, $class) {
+    $parent = $class ? get_class($this->{$class}) : __CLASS__;
+    foreach ($operations as $operation => $params) {
+      if (is_array($params[0]) && isset($params[0]['callback'])) {
+        $operation = $params[0]['callback'];
+      }
+      $this->batch['operations'][] = [
+         // __CLASS__ . '::' . $operation, $params,
+         $parent . '::' . $operation, $params,
+      ];
+    }
+  }
+
+  /**
+   * Batch Finished callback.
+   *
+   * @param bool $success
+   *   Success of the operation.
+   * @param array $results
+   *   Array of results for post processing.
+   * @param array $operations
+   *   Array of operations.
+   */
+  public function finished($success, array $results, array $operations) {
+    $messenger = \Drupal::messenger();
+    if ($success) {
+     //\Drupal::logger('Val')->notice('<pre>'. print_r($results, 1) .'</pre>');
+     // Here we could do something meaningful with the results.
+      // We just display the number of nodes we processed...
+      $messenger->addMessage(t('@count results processed.', ['@count' => count($results)]));
+    }
+    else {
+      // An error occurred.
+      // $operations contains the operations that remained unprocessed.
+      $error_operation = reset($operations);
+      $messenger->addMessage(
+        t('An error occurred while processing @operation with arguments : @args',
+          [
+            '@operation' => $error_operation[0],
+            '@args' => print_r($error_operation[0], TRUE),
+          ]
+        )
+      );
+    }
+  }
+
+
+
+
+
+
+
   /**
    * Command description here.
    *
