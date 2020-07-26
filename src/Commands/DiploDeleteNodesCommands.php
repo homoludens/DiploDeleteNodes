@@ -5,6 +5,24 @@ namespace Drupal\diplo_delete_nodes\Commands;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drush\Commands\DrushCommands;
 
+//use Drush\Commands\core\CacheCommands;
+//use Drush\Sql\SqlBase;
+use Drupal\Core\Config\ConfigFactoryInterface;
+
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Component\Utility\Html;
+
+use Drupal\pathauto\AliasStorageHelperInterface;
+use Drupal\pathauto\PathautoState;
+
+//use Drupal\pathauto\AliasTypeBatchUpdateInterface;
+//use Drupal\pathauto\AliasTypeManager;
+use Drupal\node\Entity\Node;
+
+//use Drupal\field\Entity\FieldStorageConfig;
+//use Drupal\field\Entity\FieldConfig;
+
+
 /**
  * A Drush commandfile.
  *
@@ -34,43 +52,22 @@ class DiploDeleteNodesCommands extends DrushCommands {
    */
   protected $configFactory;
 
-  /**
-   * The alias type manager.
-   *
-   * @var \Drupal\pathauto\AliasTypeManager
-   */
-  protected $aliasTypeManager;
 
   /**
-   * The alias storage helper.
-   *
-   * @var \Drupal\pathauto\AliasStorageHelperInterface
+   * 
    */
-  protected $aliasStorageHelper;
-
-  /**
-   * Constructs a new PathautoCommands object.
-   *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
-   *   The configuration object factory.
-   * @param \Drupal\pathauto\AliasTypeManager $aliasTypeManager
-   *   The alias type manager.
-   * @param \Drupal\pathauto\AliasStorageHelperInterface $aliasStorageHelper
-   *   The alias storage helper.
-   */
-  public function __construct(ConfigFactoryInterface $configFactory, AliasTypeManager $aliasTypeManager, AliasStorageHelperInterface $aliasStorageHelper) {
-    $this->configFactory = $configFactory;
-    $this->aliasTypeManager = $aliasTypeManager;
-    $this->aliasStorageHelper = $aliasStorageHelper;
-    
+  public function __construct() {
     $this->batch = [
-      'title' => $this->t('Resources upgrade'),
-      'init_message' => $this->t('Starting migration batch operations at Drupal 8 destination'),
+      'title' => $this->t('Node and Contet Type deletion'),
+      'init_message' => $this->t('Starting deletion batch operations'),
       'error_message' => $this->t('An error occured'),
-      'progress_message' => $this->t('Running migration batch operations at Drupal 8 destination'),
+      'progress_message' => $this->t('Running  deletion batch operations'),
       'operations' => [],
       'finished' => [__CLASS__, 'finished'],
     ];
+    
+    $diplo_config = \Drupal::config('diplo.settings');
+    $this->diplo_config = $diplo_config->get('migration.' . $website);
   }
    
   /**
@@ -128,22 +125,22 @@ class DiploDeleteNodesCommands extends DrushCommands {
   /**
    * First group of pre-migrate operations
 
-   * @command diplo_delete_nodes:custom-alias
-   * @aliases ddn:ca
+   * @command diplo_delete_nodes:delete-nodes
+   * @aliases ddn:dn
    * @options dry-run
    */
-  public function customAliases($type, $field, $options = ['dry-run' => FALSE]) {
+  public function deleteNodes($type, $options = ['dry-run' => FALSE]) {
     
     $this->output()->writeln('Let\'s bring it on, show starts now!');
 
     $ops = [
-      'callback' => 'customAliasesCallback',
+      'callback' => 'deleteNodesCallback',
       //'diplo_config' => $diplo_config->get($to_type . '.' . $from_type),
       'options' => $options,
       'type' => $type,
       'needle' => "%/sessions/%", //"%&quot;%", &#039;
       'comparison' => 'LIKE',
-      'field' => $field,
+//       'field' => $field,
       //'message' => t('Migrating nodes of @from_type into new nodes of @to_type', ['@from_type' => $from_type, '@to_type' => $to_type]),
     ];
 
@@ -157,23 +154,24 @@ class DiploDeleteNodesCommands extends DrushCommands {
     drush_backend_batch_process();    
     
     // Show some information at the end
-    $this->logger()->notice("Migration done.");
+    $this->logger()->notice("Deletition done.");
   }
 
 
-  public static function customAliasesCallback(array $params = [], &$context) {
+  public static function deleteNodesCallback(array $params = [], &$context) {
+
     $node_storage = \Drupal::service('entity_type.manager')->getStorage('node');
-    $nodes = $node_storage->loadByProperties(['type' => $params['type'], 'status' => NODE_PUBLISHED]);
-    $pids = [];
+    $nodes = $node_storage->loadByProperties(['type' => $params['type']]);
+    
+//     $node_storage->delete($nodes);
+    
+    $nids = [];
 
     foreach ($nodes as $nid => $node) {
-      $path = $node->get('path')->getValue();
-      if (!empty($path) && isset($path[0]['pid'])) {
-            $pids[] = $path[0]['pid'];
-      }
+      $nids[] = $nid;
     }
   
-    if (!empty($pids)) {
+    if (!empty($nids)) {
       \Drupal::service('pathauto.alias_storage_helper')->deleteMultiple($pids);
       \Drupal::logger('Val')->notice('<pre>'. print_r($pids, 1) .'</pre>');    
     }
@@ -196,6 +194,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @aliases ddn:command
    */
   public function commandName($arg1, $options = ['option-name' => 'default']) {
+    \Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
     $this->logger()->success(dt('Achievement unlocked.'));
   }
 
