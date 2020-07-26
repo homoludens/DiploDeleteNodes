@@ -25,6 +25,15 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  * See these files for an example of injecting Drupal services:
  *   - http://cgit.drupalcode.org/devel/tree/src/Commands/DevelCommands.php
  *   - http://cgit.drupalcode.org/devel/tree/drush.services.yml
+ *
+ *
+ * Compare all fields before and after nodes and Content Type deletion.
+ * drush ddn:fields > fields_before.txt
+ * drush delete:allnodes dailies
+ * drush ddn:fields > fields_after.txt
+ * vimdiff fields_before.txt fields_after.txt
+ * 
+ *
  */
 class DiploDeleteNodesCommands extends DrushCommands {
 
@@ -49,7 +58,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
    */
   private $loggerChannelFactory;
-  
   
   
   /**
@@ -77,9 +85,13 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @param object $context
    *   Context for operations.
    */
-  public function processMyNode($id, $operation_details, &$context) {
-    // Simulate long process by waiting 100 microseconds.
-    usleep(100);
+  public function processNode($id, $operation_details, &$context) {
+    
+    $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+    if ($node) {
+      $node->delete();
+    }    
+    
     // Store some results for post-processing in the 'finished' callback.
     // The contents of 'results' will be available as $results in the
     // 'finished' function (in this example, batch_example_finished()).
@@ -90,6 +102,39 @@ class DiploDeleteNodesCommands extends DrushCommands {
       '@details' => $operation_details,
     ]);
   }
+  
+  
+ /**
+   * Batch process callback.
+   * https://git.drupalcode.org/project/drush9_batch_processing/-/blob/8.x-1.x/src/BatchService.php
+   *
+   * @param int $id
+   *   Id of the batch.
+   * @param string $operation_details
+   *   Details of the operation.
+   * @param object $context
+   *   Context for operations.
+   */
+  public function processContentType($type, $operation_details, &$context) {
+    
+    // Delete content type.
+    $content_type = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->load($type);
+      
+    $content_type->delete();
+    
+    // Store some results for post-processing in the 'finished' callback.
+    // The contents of 'results' will be available as $results in the
+    // 'finished' function (in this example, batch_example_finished()).
+    $context['results'][] = $type;
+    // Optional message displayed under the progressbar.
+    $context['message'] = t('Running Batch "@type" @details', [
+      '@type' => $type,
+      '@details' => $operation_details,
+    ]);
+  }  
+  
   
   
   /**
@@ -161,26 +206,38 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $operations = [];
     $numOperations = 0;
     $batchId = 1;
+    
     if (!empty($nids)) {
+    
       foreach ($nids as $nid) {
-        // Prepare the operation. Here we could do other operations on nodes.
+
         $this->output()->writeln($this->t('Preparing batch: ') . $batchId);
         $operations[] = [
-            __CLASS__ . '::processMyNode', [
+            __CLASS__ . '::processNode', [
             $batchId,
-            $this->t('Updating node @nid', ['@nid' => $nid,]),
+            $this->t('Deleting node @nid', ['@nid' => $nid,]),
           ],
         ];
         $batchId++;
         $numOperations++;
       }
+      
+      $this->output()->writeln($this->t('Deleting content type: ') . $type);
+      $operations[] = [
+          __CLASS__ . '::processContentType', [
+          $type,
+          $this->t('Deleting Content type @type', ['@type' => $type,]),
+        ],
+      ];
+      $batchId++;
+      $numOperations++;
     }
     else {
       $this->logger()->warning($this->t('No nodes of this type @type', ['@type' => $type,]));
     }
 
     $batch = [
-      'title' => $this->t('Updating @num node(s)', ['@num' => $numOperations,]),
+      'title' => $this->t('Deleting @num node(s)', ['@num' => $numOperations,]),
       'operations' => $operations,
       'finished' => __CLASS__ . '::finished',
     ];
