@@ -23,6 +23,10 @@ use Drupal\node\Entity\Node;
 //use Drupal\field\Entity\FieldConfig;
 
 
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+
+
 /**
  * A Drush commandfile.
  *
@@ -52,23 +56,54 @@ class DiploDeleteNodesCommands extends DrushCommands {
    */
   protected $configFactory;
 
+  
+  /**
+   * Entity type service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  private $entityTypeManager;
+
+  /**
+   * Logger service.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  private $loggerChannelFactory;
+  
+  
+  
+  /**
+   * Constructs a new UpdateVideosStatsController object.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   Entity type service.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerChannelFactory
+   *   Logger service.
+   */
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, LoggerChannelFactoryInterface $loggerChannelFactory) {
+    parent::__construct();
+    $this->entityTypeManager = $entityTypeManager;
+    $this->loggerChannelFactory = $loggerChannelFactory;
+  }
+
 
   /**
    * 
    */
-  public function __construct() {
-    $this->batch = [
-      'title' => $this->t('Node and Contet Type deletion'),
-      'init_message' => $this->t('Starting deletion batch operations'),
-      'error_message' => $this->t('An error occured'),
-      'progress_message' => $this->t('Running  deletion batch operations'),
-      'operations' => [],
-      'finished' => [__CLASS__, 'finished'],
-    ];
-    
-    $diplo_config = \Drupal::config('diplo.settings');
-    $this->diplo_config = $diplo_config->get('migration.' . $website);
-  }
+//   public function __construct() {
+//     $this->batch = [
+//       'title' => $this->t('Node and Contet Type deletion'),
+//       'init_message' => $this->t('Starting deletion batch operations'),
+//       'error_message' => $this->t('An error occured'),
+//       'progress_message' => $this->t('Running  deletion batch operations'),
+//       'operations' => [],
+//       'finished' => [__CLASS__, 'finished'],
+//     ];
+//     
+//     $diplo_config = \Drupal::config('diplo.settings');
+//     $this->diplo_config = $diplo_config->get('migration.' . $website);
+//   }
   
   
   /**
@@ -110,6 +145,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
   public function finished($success, array $results, array $operations) {
     $messenger = \Drupal::messenger();
     if ($success) {
+//       $this->logger()->notice($this->t('@count results processed.', ['@count' => count($results)]));
      //\Drupal::logger('Val')->notice('<pre>'. print_r($results, 1) .'</pre>');
      // Here we could do something meaningful with the results.
       // We just display the number of nodes we processed...
@@ -207,6 +243,81 @@ class DiploDeleteNodesCommands extends DrushCommands {
   }
 
 
+  
+  /**
+   * Delete Nodes.
+   *
+   * @param string $type
+   *   Type of node to update
+   *   Argument provided to the drush command.
+   *
+   * @command delete:allnodes
+   * @aliases delete-allnodes
+   *
+   * @usage delete:allnodes foo
+   *   foo is the type of node to update
+   */
+  public function deleteAllNodes($type = '') {
+    // 1. Log the start of the script.
+    $this->output()->writeln('Delete nodes batch operations start');
+//     $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('Delete nodes batch operations start'));
+    // Check the type of node given as argument, if not, set article as default.
+    if (strlen($type) == 0) {
+      $this->output()->writeln('No Content Type selected');
+      return;
+//       $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('No Content Type selected'));
+    }
+    // 2. Retrieve all nodes of this type.
+    try {
+      $storage = $this->entityTypeManager->getStorage('node');
+      $query = $storage->getQuery()
+        ->condition('type', $type);
+      $nids = $query->execute();
+    }
+    catch (\Exception $e) {
+      $this->output()->writeln($e);
+//       $this->loggerChannelFactory->get('/*drush9_batch_processing*/')->warning($this->t('Error found @e', ['@e' => $e,]));
+    }
+    // 3. Create the operations array for the batch.
+    $operations = [];
+    $numOperations = 0;
+    $batchId = 1;
+    if (!empty($nids)) {
+      foreach ($nids as $nid) {
+        // Prepare the operation. Here we could do other operations on nodes.
+        $this->output()->writeln($this->t('Preparing batch: ') . $batchId);
+        $operations[] = [
+          __CLASS__ . '::processMyNode', [
+            $batchId,
+            $this->t('Updating node @nid', ['@nid' => $nid,]),
+          ],
+        ];
+        $batchId++;
+        $numOperations++;
+      }
+    }
+    else {
+      $this->logger()->warning($this->t('No nodes of this type @type', ['@type' => $type,]));
+    }
+    // 4. Create the batch.
+    $batch = [
+      'title' => $this->t('Updating @num node(s)', ['@num' => $numOperations,]),
+      'operations' => $operations,
+      'finished' => __CLASS__ . '::finished',
+    ];
+    // 5. Add batch operations as new batch sets.
+    batch_set($batch);
+    // 6. Process the batch sets.
+    drush_backend_batch_process();
+    // 6. Show some information.
+    $this->logger()->notice($this->t('Batch operations end.'));
+    // 7. Log some information.
+//     $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('Update batch operations end.'));
+  }
+  
+  
+  
+  
   /**
    * Command description here.
    *
