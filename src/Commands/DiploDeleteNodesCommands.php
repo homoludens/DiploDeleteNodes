@@ -69,26 +69,34 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $diplo_config = \Drupal::config('diplo.settings');
     $this->diplo_config = $diplo_config->get('migration.' . $website);
   }
-   
+  
+  
   /**
-   * Adds an operation to the batch.
+   * Batch process callback.
+   * https://git.drupalcode.org/project/drush9_batch_processing/-/blob/8.x-1.x/src/BatchService.php
    *
-   * @param array $operations
-   * @param class|null $class
+   * @param int $id
+   *   Id of the batch.
+   * @param string $operation_details
+   *   Details of the operation.
+   * @param object $context
+   *   Context for operations.
    */
-  public function addOperations(array $operations, $class) {
-    $parent = $class ? get_class($this->{$class}) : __CLASS__;
-    foreach ($operations as $operation => $params) {
-      if (is_array($params[0]) && isset($params[0]['callback'])) {
-        $operation = $params[0]['callback'];
-      }
-      $this->batch['operations'][] = [
-         // __CLASS__ . '::' . $operation, $params,
-         $parent . '::' . $operation, $params,
-      ];
-    }
+  public function processMyNode($id, $operation_details, &$context) {
+    // Simulate long process by waiting 100 microseconds.
+    usleep(100);
+    // Store some results for post-processing in the 'finished' callback.
+    // The contents of 'results' will be available as $results in the
+    // 'finished' function (in this example, batch_example_finished()).
+    $context['results'][] = $id;
+    // Optional message displayed under the progressbar.
+    $context['message'] = t('Running Batch "@id" @details', [
+      '@id' => $id,
+      '@details' => $operation_details,
+    ]);
   }
-
+  
+  
   /**
    * Batch Finished callback.
    *
@@ -122,6 +130,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
     }
   }
 
+  
   /**
    * First group of pre-migrate operations
 
@@ -158,6 +167,26 @@ class DiploDeleteNodesCommands extends DrushCommands {
   }
 
 
+  /**
+   * Adds an operation to the batch.
+   * 
+   * @param array $operations
+   * @param class|null $class
+   */
+  public function addOperations(array $operations, $class) {
+    $parent = $class ? get_class($this->{$class}) : __CLASS__;
+    foreach ($operations as $operation => $params) {
+      if (is_array($params[0]) && isset($params[0]['callback'])) {
+        $operation = $params[0]['callback'];
+      }
+      $this->batch['operations'][] = [
+         // __CLASS__ . '::' . $operation, $params,
+         $parent . '::' . $operation, $params,
+      ];
+    }
+  }  
+  
+  
   public static function deleteNodesCallback(array $params = [], &$context) {
 
     $node_storage = \Drupal::service('entity_type.manager')->getStorage('node');
