@@ -25,11 +25,17 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  *   - http://cgit.drupalcode.org/devel/tree/drush.services.yml
  *
  *
- * Compare all fields before and after nodes and Content Type deletion.
+ * Compare all fields before and after nodes and Content Type deletion:
+ *
  * drush ddn:fields > fields_before.txt
+ * drush ddn:ct > ct_count_before.txt
+ *
  * drush delete:allnodes dailies
+ *
  * drush ddn:fields > fields_after.txt
+ * drush ddn:ct > ct_count_after.txt
  * vimdiff fields_before.txt fields_after.txt
+ * vimdiff ct_count_before.txt ct_count_after.txt
  * 
  *
  */
