@@ -295,3 +295,41 @@ class DiploDeleteNodesCommands extends DrushCommands {
     
     return new RowsOfFields($rows);
   }
+
+  
+  /**
+   * Show number of nodes per Content Type
+   *
+   * @param array $options An associative array of options whose values come from cli, aliases, config, etc.
+   *
+   * @field-labels
+   *   content_type: Content Type
+   *   count: Count
+   * @default-fields content_type,count
+   *
+   * @command diplo_delete_nodes:content_type
+   * @aliases ddn:ct
+   *
+   * @filter-default-field name
+   * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
+   */
+  public function contentType($options = ['format' => 'table']) {
+    
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+      
+    foreach($types as $name => $value) {
+        $query = \Drupal::entityQuery('node')
+                ->condition('type', $name);
+        $count = $query->count()->execute();
+        
+        $rows[] = [
+          'content_type' => $name,
+          'count' => $count,
+        ];
+    }
+    
+    return new RowsOfFields($rows);
+  }
+}
