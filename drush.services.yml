@@ -1,0 +1,5 @@
+services:
+  diplo_delete_nodes.commands:
+    class: \Drupal\diplo_delete_nodes\Commands\DiploDeleteNodesCommands
+    tags:
+      - { name: drush.command }

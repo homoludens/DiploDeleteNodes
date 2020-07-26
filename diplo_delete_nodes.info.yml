@@ -1,0 +1,6 @@
+name: Diplo Delete Nodes
+type: module
+description: Drush commands to delete huge amount of nodes and their content types and non needed fields.
+package: Custom
+core: 8.x
+core_version_requirement: ^8 || ^9
