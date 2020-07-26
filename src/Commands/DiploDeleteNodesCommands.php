@@ -64,17 +64,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
         ];
       }
     }
-  
-//     $all = \Drupal::token()->getInfo();
-//     foreach ($all['tokens'] as $group => $tokens) {
-//       foreach ($tokens as $key => $token) {
-//         $rows[] = [
-//           'group' => $group,
-//           'token' => $key,
-//           'name' => $token['name'],
-//         ];
-//       }
-//     }
+    
     return new RowsOfFields($rows);
   }
 }
