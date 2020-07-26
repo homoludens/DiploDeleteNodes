@@ -31,7 +31,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *   Usage description
    *
    * @command diplo_delete_nodes:commandName
-   * @aliases foo
+   * @aliases ddn:command
    */
   public function commandName($arg1, $options = ['option-name' => 'default']) {
     $this->logger()->success(dt('Achievement unlocked.'));
@@ -43,28 +43,38 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @param array $options An associative array of options whose values come from cli, aliases, config, etc.
    *
    * @field-labels
-   *   group: Group
-   *   token: Token
-   *   name: Name
-   * @default-fields group,token,name
+   *   field: FieldID
+   *   content_type: Content Type
+   * @default-fields field,content_type
    *
-   * @command diplo_delete_nodes:token
-   * @aliases token
+   * @command diplo_delete_nodes:fields
+   * @aliases ddn:fields
    *
    * @filter-default-field name
    * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
    */
-  public function token($options = ['format' => 'table']) {
-    $all = \Drupal::token()->getInfo();
-    foreach ($all['tokens'] as $group => $tokens) {
-      foreach ($tokens as $key => $token) {
+  public function fields($options = ['format' => 'table']) {
+    $all = \Drupal::entityManager()->getFieldMap();
+    foreach ($all['node'] as $field => $field_conf) {
+      foreach ($field_conf['bundles'] as $key => $content_type) {
         $rows[] = [
-          'group' => $group,
-          'token' => $key,
-          'name' => $token['name'],
+          'field' => $field,
+          'content_type' => $content_type,
+          'content_type' => $content_type,
         ];
       }
     }
+  
+//     $all = \Drupal::token()->getInfo();
+//     foreach ($all['tokens'] as $group => $tokens) {
+//       foreach ($tokens as $key => $token) {
+//         $rows[] = [
+//           'group' => $group,
+//           'token' => $key,
+//           'name' => $token['name'],
+//         ];
+//       }
+//     }
     return new RowsOfFields($rows);
   }
 }
