@@ -100,10 +100,11 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @param object $context
    *   Context for operations.
    */
-  public function processNode($id, $operation_details, &$context) {
+  public function processNode($id, $nid, $operation_details, &$context) {
     
     // Delete node.
     $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+
     if ($node) {
       $node->delete();
     }    
@@ -231,6 +232,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
         $operations[] = [
             __CLASS__ . '::processNode', [
             $batchId,
+            $nid,
             $this->t('Deleting node @nid', ['@nid' => $nid,]),
           ],
         ];
@@ -274,8 +276,10 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *
    * @field-labels
    *   field: FieldID
+   *   field_type: Field Type
    *   content_type: Content Type
-   * @default-fields field,content_type
+   *   
+   * @default-fields field,field_type,content_type
    *
    * @command diplo_delete_nodes:fields
    * @aliases ddn:fields
@@ -287,13 +291,15 @@ class DiploDeleteNodesCommands extends DrushCommands {
     //\Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
     //$this->logger()->success(dt('Achievement unlocked.'));
     
+//     field_session_report entity reference field
+    
     $all = $this->entityFieldManager->getFieldMap();
     
     foreach ($all['node'] as $field => $field_conf) {
       foreach ($field_conf['bundles'] as $key => $content_type) {
         $rows[] = [
           'field' => $field,
-          'content_type' => $content_type,
+          'field_type' => $field_conf['type'],
           'content_type' => $content_type,
         ];
       }
