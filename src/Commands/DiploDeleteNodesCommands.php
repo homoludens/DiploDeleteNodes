@@ -86,25 +86,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $this->entityTypeManager = $entityTypeManager;
     $this->loggerChannelFactory = $loggerChannelFactory;
   }
-
-
-  /**
-   * 
-   */
-//   public function __construct() {
-//     $this->batch = [
-//       'title' => $this->t('Node and Contet Type deletion'),
-//       'init_message' => $this->t('Starting deletion batch operations'),
-//       'error_message' => $this->t('An error occured'),
-//       'progress_message' => $this->t('Running  deletion batch operations'),
-//       'operations' => [],
-//       'finished' => [__CLASS__, 'finished'],
-//     ];
-//     
-//     $diplo_config = \Drupal::config('diplo.settings');
-//     $this->diplo_config = $diplo_config->get('migration.' . $website);
-//   }
-  
   
   /**
    * Batch process callback.
@@ -145,7 +126,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
   public function finished($success, array $results, array $operations) {
     $messenger = \Drupal::messenger();
     if ($success) {
-//       $this->logger()->notice($this->t('@count results processed.', ['@count' => count($results)]));
      //\Drupal::logger('Val')->notice('<pre>'. print_r($results, 1) .'</pre>');
      // Here we could do something meaningful with the results.
       // We just display the number of nodes we processed...
@@ -168,83 +148,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
 
   
   /**
-   * First group of pre-migrate operations
-
-   * @command diplo_delete_nodes:delete-nodes
-   * @aliases ddn:dn
-   * @options dry-run
-   */
-  public function deleteNodes($type, $options = ['dry-run' => FALSE]) {
-    
-    $this->output()->writeln('Let\'s bring it on, show starts now!');
-
-    $ops = [
-      'callback' => 'deleteNodesCallback',
-      //'diplo_config' => $diplo_config->get($to_type . '.' . $from_type),
-      'options' => $options,
-      'type' => $type,
-      'needle' => "%/sessions/%", //"%&quot;%", &#039;
-      'comparison' => 'LIKE',
-//       'field' => $field,
-      //'message' => t('Migrating nodes of @from_type into new nodes of @to_type', ['@from_type' => $from_type, '@to_type' => $to_type]),
-    ];
-
-    $operations[] = [$ops];
-
-    $this->addOperations($operations, FALSE);
-
-    // Start drush batch process.
-    batch_set($this->batch);
-
-    drush_backend_batch_process();    
-    
-    // Show some information at the end
-    $this->logger()->notice("Deletition done.");
-  }
-
-
-  /**
-   * Adds an operation to the batch.
-   * 
-   * @param array $operations
-   * @param class|null $class
-   */
-  public function addOperations(array $operations, $class) {
-    $parent = $class ? get_class($this->{$class}) : __CLASS__;
-    foreach ($operations as $operation => $params) {
-      if (is_array($params[0]) && isset($params[0]['callback'])) {
-        $operation = $params[0]['callback'];
-      }
-      $this->batch['operations'][] = [
-         // __CLASS__ . '::' . $operation, $params,
-         $parent . '::' . $operation, $params,
-      ];
-    }
-  }  
-  
-  
-  public static function deleteNodesCallback(array $params = [], &$context) {
-
-    $node_storage = \Drupal::service('entity_type.manager')->getStorage('node');
-    $nodes = $node_storage->loadByProperties(['type' => $params['type']]);
-    
-//     $node_storage->delete($nodes);
-    
-    $nids = [];
-
-    foreach ($nodes as $nid => $node) {
-      $nids[] = $nid;
-    }
-  
-    if (!empty($nids)) {
-      \Drupal::service('pathauto.alias_storage_helper')->deleteMultiple($pids);
-      \Drupal::logger('Val')->notice('<pre>'. print_r($pids, 1) .'</pre>');    
-    }
-  }
-
-
-  
-  /**
    * Delete Nodes.
    *
    * @param string $type
@@ -258,16 +161,14 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *   foo is the type of node to update
    */
   public function deleteAllNodes($type = '') {
-    // 1. Log the start of the script.
+
     $this->output()->writeln('Delete nodes batch operations start');
-//     $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('Delete nodes batch operations start'));
-    // Check the type of node given as argument, if not, set article as default.
+
     if (strlen($type) == 0) {
       $this->output()->writeln('No Content Type selected');
       return;
-//       $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('No Content Type selected'));
     }
-    // 2. Retrieve all nodes of this type.
+
     try {
       $storage = $this->entityTypeManager->getStorage('node');
       $query = $storage->getQuery()
@@ -276,9 +177,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
     }
     catch (\Exception $e) {
       $this->output()->writeln($e);
-//       $this->loggerChannelFactory->get('/*drush9_batch_processing*/')->warning($this->t('Error found @e', ['@e' => $e,]));
     }
-    // 3. Create the operations array for the batch.
+
     $operations = [];
     $numOperations = 0;
     $batchId = 1;
@@ -287,7 +187,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
         // Prepare the operation. Here we could do other operations on nodes.
         $this->output()->writeln($this->t('Preparing batch: ') . $batchId);
         $operations[] = [
-          __CLASS__ . '::processMyNode', [
+            __CLASS__ . '::processMyNode', [
             $batchId,
             $this->t('Updating node @nid', ['@nid' => $nid,]),
           ],
@@ -299,44 +199,20 @@ class DiploDeleteNodesCommands extends DrushCommands {
     else {
       $this->logger()->warning($this->t('No nodes of this type @type', ['@type' => $type,]));
     }
-    // 4. Create the batch.
+
     $batch = [
       'title' => $this->t('Updating @num node(s)', ['@num' => $numOperations,]),
       'operations' => $operations,
       'finished' => __CLASS__ . '::finished',
     ];
-    // 5. Add batch operations as new batch sets.
+
     batch_set($batch);
-    // 6. Process the batch sets.
+
     drush_backend_batch_process();
-    // 6. Show some information.
+    
     $this->logger()->notice($this->t('Batch operations end.'));
-    // 7. Log some information.
-//     $this->loggerChannelFactory->get('drush9_batch_processing')->info($this->t('Update batch operations end.'));
   }
   
-  
-  
-  
-  /**
-   * Command description here.
-   *
-   * @param $arg1
-   *   Argument description.
-   * @param array $options
-   *   An associative array of options whose values come from cli, aliases, config, etc.
-   * @option option-name
-   *   Description
-   * @usage diplo_delete_nodes-commandName foo
-   *   Usage description
-   *
-   * @command diplo_delete_nodes:commandName
-   * @aliases ddn:command
-   */
-  public function commandName($arg1, $options = ['option-name' => 'default']) {
-    \Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
-    $this->logger()->success(dt('Achievement unlocked.'));
-  }
 
   /**
    * An example of the table output format.
@@ -355,6 +231,9 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
    */
   public function fields($options = ['format' => 'table']) {
+    \Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
+    $this->logger()->success(dt('Achievement unlocked.'));
+    
     $all = \Drupal::entityManager()->getFieldMap();
     foreach ($all['node'] as $field => $field_conf) {
       foreach ($field_conf['bundles'] as $key => $content_type) {
