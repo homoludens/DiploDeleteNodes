@@ -125,10 +125,59 @@ class DiploDeleteNodesCommands extends DrushCommands {
     }
   }
 
+  /**
+   * First group of pre-migrate operations
+
+   * @command diplo_delete_nodes:custom-alias
+   * @aliases ddn:ca
+   * @options dry-run
+   */
+  public function customAliases($type, $field, $options = ['dry-run' => FALSE]) {
+    
+    $this->output()->writeln('Let\'s bring it on, show starts now!');
+
+    $ops = [
+      'callback' => 'customAliasesCallback',
+      //'diplo_config' => $diplo_config->get($to_type . '.' . $from_type),
+      'options' => $options,
+      'type' => $type,
+      'needle' => "%/sessions/%", //"%&quot;%", &#039;
+      'comparison' => 'LIKE',
+      'field' => $field,
+      //'message' => t('Migrating nodes of @from_type into new nodes of @to_type', ['@from_type' => $from_type, '@to_type' => $to_type]),
+    ];
+
+    $operations[] = [$ops];
+
+    $this->addOperations($operations, FALSE);
+
+    // Start drush batch process.
+    batch_set($this->batch);
+
+    drush_backend_batch_process();    
+    
+    // Show some information at the end
+    $this->logger()->notice("Migration done.");
+  }
 
 
+  public static function customAliasesCallback(array $params = [], &$context) {
+    $node_storage = \Drupal::service('entity_type.manager')->getStorage('node');
+    $nodes = $node_storage->loadByProperties(['type' => $params['type'], 'status' => NODE_PUBLISHED]);
+    $pids = [];
 
-
+    foreach ($nodes as $nid => $node) {
+      $path = $node->get('path')->getValue();
+      if (!empty($path) && isset($path[0]['pid'])) {
+            $pids[] = $path[0]['pid'];
+      }
+    }
+  
+    if (!empty($pids)) {
+      \Drupal::service('pathauto.alias_storage_helper')->deleteMultiple($pids);
+      \Drupal::logger('Val')->notice('<pre>'. print_r($pids, 1) .'</pre>');    
+    }
+  }
 
 
   /**
