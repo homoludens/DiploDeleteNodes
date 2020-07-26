@@ -5,23 +5,11 @@ namespace Drupal\diplo_delete_nodes\Commands;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drush\Commands\DrushCommands;
 
-//use Drush\Commands\core\CacheCommands;
-//use Drush\Sql\SqlBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Component\Utility\Html;
 
-use Drupal\pathauto\AliasStorageHelperInterface;
-use Drupal\pathauto\PathautoState;
-
-//use Drupal\pathauto\AliasTypeBatchUpdateInterface;
-//use Drupal\pathauto\AliasTypeManager;
 use Drupal\node\Entity\Node;
-
-//use Drupal\field\Entity\FieldStorageConfig;
-//use Drupal\field\Entity\FieldConfig;
-
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -46,15 +34,6 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @var array
    */
   protected $batch;
-
-  public $diplo_config;
-
-   /**
-   * The configuration object factory.
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  protected $configFactory;
 
   
   /**
