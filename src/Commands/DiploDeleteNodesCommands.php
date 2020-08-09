@@ -3,6 +3,7 @@
 namespace Drupal\diplo_delete_nodes\Commands;
 
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
+use \Consolidation\OutputFormatters\StructuredData\UnstruturedData;
 use Drush\Commands\DrushCommands;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -11,7 +12,9 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 
-
+//for deleting metatag field
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\field\Entity\FieldConfig;
 
 /**
  * A Drush commandfile.
@@ -37,6 +40,11 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  * vimdiff fields_before.txt fields_after.txt
  * vimdiff ct_count_before.txt ct_count_after.txt
  * 
+ *
+ * drush ddn:fields|grep meta > before.txt
+ * drush ddn:mm
+ * drush ddn:fields|grep meta > after.txt
+ * vimdiff before.txt after.txt
  *
  */
 class DiploDeleteNodesCommands extends DrushCommands {
@@ -294,8 +302,9 @@ class DiploDeleteNodesCommands extends DrushCommands {
 //     field_session_report entity reference field
     
     $all = $this->entityFieldManager->getFieldMap();
-    
+
     foreach ($all['node'] as $field => $field_conf) {
+      
       foreach ($field_conf['bundles'] as $key => $content_type) {
         $rows[] = [
           'field' => $field,
@@ -344,4 +353,59 @@ class DiploDeleteNodesCommands extends DrushCommands {
     
     return new RowsOfFields($rows);
   }
+
+
+  /**
+   * Move wrong field_meta_tags to field_metatag 
+   * and delete field_meta_tags and field_meta_test
+   *
+   * @command diplo_delete_nodes:move_meta
+   * @aliases ddn:mm
+   *
+   */
+  public function moveMeta() {
+    $entity_type = 'node';
+  
+    $database = \Drupal::database();
+    $query = $database->query("SELECT entity_id, bundle FROM {node__field_meta_tags}");
+    $result = $query->fetchAllKeyed(); 
+    
+    print_r($result);
+  
+    // moving data form field_meta_tags to field_metatag
+    foreach($result as $nid => $node_type) {
+        $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
+        $this->logger()->notice($this->t('Node @nid loaded', ['@nid' => $nid,]));
+        $field_meta_tags = $node->field_meta_tags->value;
+
+        $field_metatag = $node->field_metatag->value;
+
+        $node->field_metatag->value = $node->field_meta_tags->value;
+        $node->save();
+    }
+
+    // Deleting field storage.
+    FieldStorageConfig::loadByName('node', 'field_meta_tags')->delete();
+    $this->logger()->notice($this->t('field_meta_tags deleted', ['@nid' => $nid,]));
+    
+    FieldStorageConfig::loadByName('node', 'field_meta_test')->delete();
+    $this->logger()->notice($this->t('field_meta_tags deleted', ['@nid' => $nid,]));
+    
+    // Deleting field. not needed, since FieldConfig has a dependency on the FieldStorageConfigfield 
+//     FieldConfig::loadByName('node', 'blog', 'field_meta_tags')->delete();    
+//     FieldConfig::loadByName('node', 'event', 'field_meta_tags')->delete(); 
+//     FieldConfig::loadByName('node', 'page', 'field_meta_tags')->delete(); 
+    
+//   field_meta_tags                   metatag                      blog                     
+//   field_meta_tags                   metatag                      course                   
+//   field_meta_tags                   metatag                      diplo_news               
+//   field_meta_tags                   metatag                      event                    
+//   field_meta_tags                   metatag                      page                     
+//   field_meta_tags                   metatag                      topic                    
+//   field_meta_tags                   metatag                      book_reviews  
+    
+    
+  }
 }
+
+
