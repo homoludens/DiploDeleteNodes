@@ -422,36 +422,21 @@ class DiploDeleteNodesCommands extends DrushCommands {
 
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
     $nids = $query->condition('status', '1')
-                   ->condition('field_tags.entity.name', '', '<>')
+//                  ->condition('field_tags.entity.name', 'NetNeutrality', '=') //test one term
                   ->exists('field_tags')
+//                  ->range(0, 10)  //limit
                   ->execute();
 //    $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($nids);
 
-
-//    $query = \Drupal::entityQuery('node')
-//      ->condition('status', 1)
-//      ->condition('field_tags.entity.name', '');
-
-//    $database = \Drupal::database();
-//    $query = $database->query("SELECT entity_id, bundle FROM {node__field_meta_tags}");
-//    $result = $query->fetchAll();
-
-
     foreach($nids as $nid ) {
-//      print_r($nid);
+
       $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
-
-//      print_r($node);
-//      drush_print($node->nid->value);
-//      drush_print($node->getType());
-//      print_r($node->get('field_tags')->getValue());
-
-//      $node->field_tag->value;
 
       $node_type = $node->getType();
       $node_nid = $node->nid->value;
       $node_url = 'https://diplomacy.edu' . \Drupal::service('path_alias.manager')->getAliasByPath('/node/'. $node_nid, NULL);
       $term_ids = $node->get('field_tags')->getValue();
+      $title = $node->title->value;
 
       $tags = '';
       foreach ($term_ids as $key => $value) {
@@ -466,6 +451,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
       $rows[] = [
         'content_type' => $node_type,
         'nid' => $node_nid,
+        'title' => $title,
         'url' => $node_url,
         'tags' => $tags
       ];
