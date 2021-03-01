@@ -39,7 +39,7 @@ use Drupal\field\Entity\FieldConfig;
  * drush ddn:ct > ct_count_after.txt
  * vimdiff fields_before.txt fields_after.txt
  * vimdiff ct_count_before.txt ct_count_after.txt
- * 
+ *
  *
  * drush ddn:fields|grep meta > before.txt
  * drush ddn:mm
@@ -56,14 +56,14 @@ class DiploDeleteNodesCommands extends DrushCommands {
    */
   protected $batch;
 
-  
+
   /**
    * Entity type service.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   private $entityTypeManager;
-  
+
   /**
    * Entity type service.
    *
@@ -77,15 +77,15 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
    */
   private $loggerChannelFactory;
-  
-  
+
+
   /**
    * Constructs a new UpdateVideosStatsController object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   Entity type service.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entityFieldManager
-   *   Entity type service.  
+   *   Entity type service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerChannelFactory
    *   Logger service.
    */
@@ -95,8 +95,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $this->loggerChannelFactory = $loggerChannelFactory;
     $this->entityFieldManager = $entityFieldManager;
   }
-  
-  
+
+
   /**
    * Batch process callback.
    * https://git.drupalcode.org/project/drush9_batch_processing/-/blob/8.x-1.x/src/BatchService.php
@@ -109,14 +109,14 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *   Context for operations.
    */
   public function processNode($id, $nid, $operation_details, &$context) {
-    
+
     // Delete node.
     $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
 
     if ($node) {
       $node->delete();
-    }    
-    
+    }
+
     // Store some results for post-processing in the 'finished' callback.
     // The contents of 'results' will be available as $results in the
     // 'finished' function (in this example, batch_example_finished()).
@@ -127,8 +127,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
       '@details' => $operation_details,
     ]);
   }
-  
-  
+
+
  /**
    * Batch process callback.
    * https://git.drupalcode.org/project/drush9_batch_processing/-/blob/8.x-1.x/src/BatchService.php
@@ -141,14 +141,14 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *   Context for operations.
    */
   public function processContentType($type, $operation_details, &$context) {
-    
+
     // Delete content type.
     $content_type = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->load($type);
-      
+
     $content_type->delete();
-    
+
     // Store some results for post-processing in the 'finished' callback.
     // The contents of 'results' will be available as $results in the
     // 'finished' function (in this example, batch_example_finished()).
@@ -158,9 +158,9 @@ class DiploDeleteNodesCommands extends DrushCommands {
       '@type' => $type,
       '@details' => $operation_details,
     ]);
-  }  
-  
-  
+  }
+
+
   /**
    * Batch Finished callback.
    *
@@ -194,7 +194,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
     }
   }
 
-  
+
   /**
    * Delete Nodes.
    *
@@ -230,9 +230,9 @@ class DiploDeleteNodesCommands extends DrushCommands {
     $operations = [];
     $numOperations = 0;
     $batchId = 1;
-    
+
     if (!empty($nids)) {
-      
+
       // add node deletion to batch
       foreach ($nids as $nid) {
 
@@ -247,7 +247,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
         $batchId++;
         $numOperations++;
       }
-      
+
       // add content type deletion to end of the batch
       $this->output()->writeln($this->t('Deleting content type: ') . $type);
       $operations[] = [
@@ -272,10 +272,10 @@ class DiploDeleteNodesCommands extends DrushCommands {
     batch_set($batch);
 
     drush_backend_batch_process();
-    
+
     $this->logger()->notice($this->t('Batch operations end.'));
   }
-  
+
 
   /**
    * An example of the table output format.
@@ -286,7 +286,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *   field: FieldID
    *   field_type: Field Type
    *   content_type: Content Type
-   *   
+   *
    * @default-fields field,field_type,content_type
    *
    * @command diplo_delete_nodes:fields
@@ -298,13 +298,13 @@ class DiploDeleteNodesCommands extends DrushCommands {
   public function fields($options = ['format' => 'table']) {
     //\Drupal::logger('Val')->notice('<pre>'. print_r($arg1, 1) .'</pre>');
     //$this->logger()->success(dt('Achievement unlocked.'));
-    
+
 //     field_session_report entity reference field
-    
+
     $all = $this->entityFieldManager->getFieldMap();
 
     foreach ($all['node'] as $field => $field_conf) {
-      
+
       foreach ($field_conf['bundles'] as $key => $content_type) {
         $rows[] = [
           'field' => $field,
@@ -313,11 +313,11 @@ class DiploDeleteNodesCommands extends DrushCommands {
         ];
       }
     }
-    
+
     return new RowsOfFields($rows);
   }
 
-  
+
   /**
    * Show number of nodes per Content Type
    *
@@ -335,28 +335,28 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
    */
   public function contentType($options = ['format' => 'table']) {
-    
+
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->loadMultiple();
-      
+
     foreach($types as $name => $value) {
         $query = \Drupal::entityQuery('node')
                 ->condition('type', $name);
         $count = $query->count()->execute();
-        
+
         $rows[] = [
           'content_type' => $name,
           'count' => $count,
         ];
     }
-    
+
     return new RowsOfFields($rows);
   }
 
 
   /**
-   * Move wrong field_meta_tags to field_metatag 
+   * Move wrong field_meta_tags to field_metatag
    * and delete field_meta_tags and field_meta_test
    *
    * @command diplo_delete_nodes:move_meta
@@ -365,13 +365,13 @@ class DiploDeleteNodesCommands extends DrushCommands {
    */
   public function moveMeta() {
     $entity_type = 'node';
-  
+
     $database = \Drupal::database();
     $query = $database->query("SELECT entity_id, bundle FROM {node__field_meta_tags}");
-    $result = $query->fetchAllKeyed(); 
-    
+    $result = $query->fetchAllKeyed();
+
     print_r($result);
-  
+
     // moving data form field_meta_tags to field_metatag
     foreach($result as $nid => $node_type) {
         $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
@@ -387,24 +387,94 @@ class DiploDeleteNodesCommands extends DrushCommands {
     // Deleting field storage.
     FieldStorageConfig::loadByName('node', 'field_meta_tags')->delete();
     $this->logger()->notice($this->t('field_meta_tags deleted', ['@nid' => $nid,]));
-    
+
     FieldStorageConfig::loadByName('node', 'field_meta_test')->delete();
     $this->logger()->notice($this->t('field_meta_tags deleted', ['@nid' => $nid,]));
-    
-    // Deleting field. not needed, since FieldConfig has a dependency on the FieldStorageConfigfield 
-//     FieldConfig::loadByName('node', 'blog', 'field_meta_tags')->delete();    
-//     FieldConfig::loadByName('node', 'event', 'field_meta_tags')->delete(); 
-//     FieldConfig::loadByName('node', 'page', 'field_meta_tags')->delete(); 
-    
-//   field_meta_tags                   metatag                      blog                     
-//   field_meta_tags                   metatag                      course                   
-//   field_meta_tags                   metatag                      diplo_news               
-//   field_meta_tags                   metatag                      event                    
-//   field_meta_tags                   metatag                      page                     
-//   field_meta_tags                   metatag                      topic                    
-//   field_meta_tags                   metatag                      book_reviews  
-    
-    
+
+    // Deleting field. not needed, since FieldConfig has a dependency on the FieldStorageConfigfield
+//     FieldConfig::loadByName('node', 'blog', 'field_meta_tags')->delete();
+//     FieldConfig::loadByName('node', 'event', 'field_meta_tags')->delete();
+//     FieldConfig::loadByName('node', 'page', 'field_meta_tags')->delete();
+
+//   field_meta_tags                   metatag                      blog
+//   field_meta_tags                   metatag                      course
+//   field_meta_tags                   metatag                      diplo_news
+//   field_meta_tags                   metatag                      event
+//   field_meta_tags                   metatag                      page
+//   field_meta_tags                   metatag                      topic
+//   field_meta_tags                   metatag                      book_reviews
+
+
+  }
+
+
+  /**
+   * Move wrong field_meta_tags to field_metatag
+   * and delete field_meta_tags and field_meta_test
+   * drush ddn:etc --format=csv > nodes_tags.csv
+   *
+   * @command diplo_delete_nodes:export_to_csv
+   * @aliases ddn:etc
+   *
+   */
+  public function exportToCsv($options = ['format' => 'table']) {
+    $entity_type = 'node';
+
+    $query = $this->entityTypeManager->getStorage('node')->getQuery();
+    $nids = $query->condition('status', '1')
+                   ->condition('field_tags.entity.name', '', '<>')
+                  ->exists('field_tags')
+                  ->execute();
+//    $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($nids);
+
+
+//    $query = \Drupal::entityQuery('node')
+//      ->condition('status', 1)
+//      ->condition('field_tags.entity.name', '');
+
+//    $database = \Drupal::database();
+//    $query = $database->query("SELECT entity_id, bundle FROM {node__field_meta_tags}");
+//    $result = $query->fetchAll();
+
+
+    foreach($nids as $nid ) {
+//      print_r($nid);
+      $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
+
+//      print_r($node);
+//      drush_print($node->nid->value);
+//      drush_print($node->getType());
+//      print_r($node->get('field_tags')->getValue());
+
+//      $node->field_tag->value;
+
+      $node_type = $node->getType();
+      $node_nid = $node->nid->value;
+      $node_url = 'https://diplomacy.edu' . \Drupal::service('path_alias.manager')->getAliasByPath('/node/'. $node_nid, NULL);
+      $term_ids = $node->get('field_tags')->getValue();
+
+      $tags = '';
+      foreach ($term_ids as $key => $value) {
+//        drush_print($value['target_id']);
+        $term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($value['target_id']);
+//        print_r($term->get('name')->getValue()[0]['value']);
+        if ($term) {
+          $tags .= $term->get('name')->getValue()[0]['value'] . ', ';
+        }
+      }
+
+      $rows[] = [
+        'content_type' => $node_type,
+        'nid' => $node_nid,
+        'url' => $node_url,
+        'tags' => $tags
+      ];
+    }
+
+//    print_r(count($nids));
+
+    return new RowsOfFields($rows);
+
   }
 }
 
