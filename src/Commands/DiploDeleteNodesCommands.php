@@ -462,6 +462,45 @@ class DiploDeleteNodesCommands extends DrushCommands {
     return new RowsOfFields($rows);
 
   }
+
+
+  /**
+   * Move wrong field_meta_tags to field_metatag
+   * and delete field_meta_tags and field_meta_test
+   * drush ddn:ettc --format=csv > nodes_tags.csv
+   *
+   * @command diplo_delete_nodes:export_tags_to_csv
+   * @aliases ddn:ettc
+   *
+   */
+  public function exportTagsToCsv($options = ['format' => 'table']) {
+    
+    $vid = 'tags';
+    $terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+
+    foreach ($terms as $term) {
+
+      $query = $this->entityTypeManager->getStorage('node')->getQuery();
+      $number_of_nodes = $query->condition('status', '1')
+                              ->condition('field_tags.entity.tid', $term->tid , '=') //test one term
+                              ->exists('field_tags')
+                               ->count()
+                              ->execute();
+
+
+      $term_data[] = array(
+        'id' => $term->tid,
+        'name' => $term->name,
+        'count' => $number_of_nodes
+      );
+    }
+
+
+    return new RowsOfFields($term_data);
+
+  }
 }
+
+
 
 
