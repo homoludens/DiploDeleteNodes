@@ -532,8 +532,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
       $node_url = 'https://diplomacy.edu' . \Drupal::service('path_alias.manager')->getAliasByPath('/node/'. $node_nid, NULL);
       $webform_id = $node->get('webform')->getValue()[0]['target_id'];
 
-      $webform_title = '';
-      $webform_status = '';
+      $webform_title = 'NONE';
+      $webform_status = 'NONE';
 
       if ($webform_id) {
 //        print_r($node->get('webform')->getValue());
