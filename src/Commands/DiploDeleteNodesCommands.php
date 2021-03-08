@@ -474,7 +474,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
    *
    */
   public function exportTagsToCsv($options = ['format' => 'table']) {
-    
+
     $vid = 'tags';
     $terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
 
@@ -499,8 +499,80 @@ class DiploDeleteNodesCommands extends DrushCommands {
     return new RowsOfFields($term_data);
 
   }
+
+  /**
+   * Move wrong field_meta_tags to field_metatag
+   * and delete field_meta_tags and field_meta_test
+   * drush ddn:ewtc --format=csv > webform_list.csv
+   *
+   * @command diplo_delete_nodes:export_webfroms_to_csv
+   * @aliases ddn:ewtc
+   *
+   */
+  public function exportWebformsToCsv($options = ['format' => 'table']) {
+    $entity_type = 'node';
+
+    $query = $this->entityTypeManager->getStorage('node')->getQuery();
+    $nids = $query->condition('status', '1')
+                  ->condition('type', 'webform')
+//                  ->range(0, 5)
+                  ->execute();
+    //    $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($nids);
+
+    foreach($nids as $nid ) {
+
+
+
+      $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
+
+//      print_r($node);
+
+      $node_type = $node->getType();
+      $node_nid = $node->nid->value;
+      $node_url = 'https://diplomacy.edu' . \Drupal::service('path_alias.manager')->getAliasByPath('/node/'. $node_nid, NULL);
+      $webform_id = $node->get('webform')->getValue()[0]['target_id'];
+
+      $webform_title = '';
+      $webform_status = '';
+
+      if ($webform_id) {
+//        print_r($node->get('webform')->getValue());
+
+        $webform = \Drupal::entityTypeManager()
+          ->getStorage('webform')
+          ->load($webform_id);
+
+        //      print_r($webform);
+
+        $webform_settings_url = 'https://diplomacy.edu' . \Drupal::service('path_alias.manager')
+            ->getAliasByPath('/admin/structure/webform/manage/' . $webform_id . '/settings', NULL);
+
+
+        $webform_title = $webform->get('title');
+        $webform_status = $webform->get('status');
+//        print_r($webform_title);
+        $title = $node->title->value;
+      }
+
+
+
+      $rows[] = [
+        'content_type' => $node_type,
+        'nid' => $node_nid,
+        'title' => $title,
+        'url' => $node_url,
+        'webform' => $webform_title,
+        'webform status' => $webform_status,
+        'webform id' => $webform_id,
+        'webform settings url' => $webform_settings_url
+      ];
+    }
+
+    //    print_r(count($nids));
+
+    return new RowsOfFields($rows);
+
+  }
+
 }
-
-
-
 
