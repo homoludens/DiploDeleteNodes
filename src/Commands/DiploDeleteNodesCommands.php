@@ -555,17 +555,18 @@ class DiploDeleteNodesCommands extends DrushCommands {
       }
 
 
-
-      $rows[] = [
-        'content_type' => $node_type,
-        'nid' => $node_nid,
-        'title' => $title,
-        'url' => $node_url,
-        'webform' => $webform_title,
-        'webform status' => $webform_status,
-        'webform id' => $webform_id,
-        'webform settings url' => $webform_settings_url
-      ];
+      if ($webform_status == 'open') {
+        $rows[] = [
+          'content_type' => $node_type,
+          'nid' => $node_nid,
+          'title' => $title,
+          'url' => $node_url,
+          'webform' => $webform_title,
+          'webform status' => $webform_status,
+          'webform id' => $webform_id,
+          'webform settings url' => $webform_settings_url
+        ];
+      }
     }
 
     //    print_r(count($nids));
