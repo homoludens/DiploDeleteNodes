@@ -11,6 +11,7 @@ use Drupal\node\Entity\Node;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\taxonomy\Entity\Vocabulary;
 
 //for deleting metatag field
 use Drupal\field\Entity\FieldStorageConfig;
@@ -283,11 +284,13 @@ class DiploDeleteNodesCommands extends DrushCommands {
    * @param array $options An associative array of options whose values come from cli, aliases, config, etc.
    *
    * @field-labels
+   *   field_name: Field Name
    *   field: FieldID
    *   field_type: Field Type
    *   content_type: Content Type
+   *   content_type_name: Content Type Name
    *
-   * @default-fields field,field_type,content_type
+   * @default-fields field_name,field,field_type,content_type,content_type_name
    *
    * @command diplo_delete_nodes:fields
    * @aliases ddn:fields
@@ -303,13 +306,32 @@ class DiploDeleteNodesCommands extends DrushCommands {
 
     $all = $this->entityFieldManager->getFieldMap();
 
+    $field_config = \Drupal\field\Entity\FieldStorageConfig::loadByName('node', 'field_imageurl');
+//    print_r($field_config);
+
+    $content_types = \Drupal\node\Entity\NodeType::loadMultiple();
+
+    foreach ($content_types as $key => $value) {
+      $label = $value->get('name');
+      $machine_name = $key;
+      $ct_labels[$machine_name] = $label;
+    }
+//    print_r($ct_labels);
+
+
     foreach ($all['node'] as $field => $field_conf) {
 
       foreach ($field_conf['bundles'] as $key => $content_type) {
+
+        $definitions = \Drupal::service('entity_field.manager')->getFieldDefinitions('node', $content_type);
+        $field_label = $definitions[$field]->getLabel();
+
         $rows[] = [
+          'field_name' => $field_label,
           'field' => $field,
           'field_type' => $field_conf['type'],
           'content_type' => $content_type,
+          'content_type_name' => $ct_labels[$content_type],
         ];
       }
     }
@@ -349,6 +371,58 @@ class DiploDeleteNodesCommands extends DrushCommands {
           'content_type' => $name,
           'count' => $count,
         ];
+    }
+
+    return new RowsOfFields($rows);
+  }
+
+  /**
+   * Show list of tags with IDs
+   *
+   * @param array $options An associative array of options whose values come from cli, aliases, config, etc.
+   *
+   * @field-labels
+   *   vocabulary_name: Vocabulary Name
+   *   vocabulary_id: Vocabulary ID
+   *   term_name: Term Name
+   *   term_id: Term Id
+   *   count: Number of uses
+   * @default-fields term_id,term_name,vocabulary_id,vocabulary_name
+   *
+   * @command diplo_delete_nodes:taxonomy_term_count
+   * @aliases ddn:tt
+   *
+   * @filter-default-field name
+   * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields
+   */
+  public function taxonomyTermCount($options = ['format' => 'table']) {
+    $vid = 'tags';
+
+    $vocabularies = Vocabulary::loadMultiple();
+//    Drupal\taxonomy\Entity\Vocabulary::loadMultiple()
+    // To get names:
+    foreach($vocabularies as $vocabulary) {
+
+      $vid = $vocabulary->id();
+      $vid_name = $vocabulary->label();
+
+      $query = \Drupal::entityQuery('taxonomy_term');
+      $query->condition('vid', $vid);
+      $tids = $query->execute();
+      $terms = \Drupal\taxonomy\Entity\Term::loadMultiple($tids);
+
+      foreach ($terms as $term) {
+//        $query_count = \Drupal::entityQuery('node');
+//        $query_count->condition('tid', $term->id());
+//        $count = $query_count->count()->execute();
+
+        $rows[] = [
+          'term_id' => $term->id(),
+          'term_name' => $term->name->value,
+          'vocabulary_id' => $vid,
+          'vocabulary_name' => $vid_name,
+        ];
+      }
     }
 
     return new RowsOfFields($rows);
@@ -512,9 +586,17 @@ class DiploDeleteNodesCommands extends DrushCommands {
   public function exportWebformsToCsv($options = ['format' => 'table']) {
     $entity_type = 'node';
 
+
+//    $query_webforms = \Drupal::entityTypeManager()->getStorage('webform')->getQuery();
+//    $wf_ids = $query_webforms->condition('status', 'open')
+////                              ->range(0, 5)
+//                             ->execute();
+//
+//    print_r($wf_ids);
+
+
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
-    $nids = $query->condition('status', '1')
-                  ->condition('type', 'webform')
+    $nids = $query->condition('type', 'webform')
 //                  ->range(0, 5)
                   ->execute();
     //    $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($nids);
