@@ -230,6 +230,7 @@ class DiploDeleteNodesCommands extends DrushCommands {
 
     $operations = [];
     $numOperations = 0;
+    $batchId_temp = 1;
     $batchId = 1;
 
     if (!empty($nids)) {
@@ -245,7 +246,8 @@ class DiploDeleteNodesCommands extends DrushCommands {
             $this->t('Deleting node @nid', ['@nid' => $nid,]),
           ],
         ];
-        $batchId++;
+        $batchId_temp++;
+        $batchId = floor($batchId_temp/20);
         $numOperations++;
       }
 
@@ -270,7 +272,11 @@ class DiploDeleteNodesCommands extends DrushCommands {
       'finished' => __CLASS__ . '::finished',
     ];
 
+    $batch['progressive'] = FALSE;
     batch_set($batch);
+
+    $batch = & batch_get();
+    $batch['progressive'] = FALSE;
 
     drush_backend_batch_process();
 
